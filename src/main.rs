@@ -1,4 +1,5 @@
 use serde_derive::Deserialize;
+use std::env;
 
 #[derive(Deserialize, Debug)]
 struct Rss {
@@ -20,7 +21,25 @@ struct Item {
     description: String,
 }
 
-fn main() {
+async fn tweet(text: String) {
+    dotenv::dotenv().unwrap();
+    let consumer_key = env::var("CONSUMER_KEY").unwrap();
+    let consumer_secret = env::var("CONSUMER_SECRET").unwrap();
+    let access_token = env::var("ACCESS_TOKEN").unwrap();
+    let access_secret = env::var("ACCESS_SECRET").unwrap();
+
+    let consumer = egg_mode::KeyPair::new(consumer_key, consumer_secret);
+    let access = egg_mode::KeyPair::new(access_token, access_secret);
+    let token = egg_mode::Token::Access { consumer, access };
+
+    egg_mode::tweet::DraftTweet::new(text)
+        .send(&token)
+        .await
+        .unwrap();
+}
+
+#[tokio::main]
+async fn main() {
     let url = "https://www.rfc-editor.org/rfcrss.xml";
     let res = reqwest::blocking::get(url).unwrap();
     let xml = res.text().unwrap();
