@@ -1,5 +1,7 @@
 use serde_derive::Deserialize;
-use std::env;
+use std::fs::File;
+use std::io::Write;
+use std::{env, fs};
 
 #[derive(Deserialize, Debug)]
 struct Rss {
@@ -38,17 +40,45 @@ async fn tweet(text: String) {
         .unwrap();
 }
 
+fn parse() -> Channel {
+    const URL: &str = "https://www.rfc-editor.org/rfcrss.xml";
+    let res = reqwest::blocking::get(URL).unwrap();
+    let xml = res.text().unwrap();
+    serde_xml_rs::from_str::<Rss>(&xml).unwrap().channel
+}
+
+fn compose_text(item: &Item) -> String {
+    const MAX_LENGTH: usize = 280;
+    const ELLIPSIS: &str = "...";
+    let text = format!("[{}]({}) {}", item.title, item.link, item.description);
+    if text.len() > MAX_LENGTH {
+        let text = text[0..(MAX_LENGTH - ELLIPSIS.len())].trim();
+        format!("{}{}", text, ELLIPSIS)
+    } else {
+        text
+    }
+}
+
+fn is_updated(last_build_date: &str) -> bool {
+    const PATH: &str = "last_build_date";
+    if fs::read_to_string(PATH).unwrap() == last_build_date {
+        true
+    } else {
+        let mut file = File::create(PATH).unwrap();
+        file.write_all(last_build_date.as_bytes()).unwrap();
+        false
+    }
+}
+
 #[tokio::main]
 async fn main() {
-    let url = "https://www.rfc-editor.org/rfcrss.xml";
-    let res = reqwest::blocking::get(url).unwrap();
-    let xml = res.text().unwrap();
-
     let Channel {
         last_build_date,
         items,
-    } = serde_xml_rs::from_str::<Rss>(&xml).unwrap().channel;
+    } = parse();
 
-    println!("{:?}", last_build_date);
-    println!("{:?}", items);
+    if !is_updated(&last_build_date) {
+        let text = compose_text(&items[0]);
+        tweet(text).await;
+    }
 }
