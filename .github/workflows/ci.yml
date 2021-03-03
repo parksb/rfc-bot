@@ -1,0 +1,17 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: test
+        run: cargo test --verbose
+      - name: build
+        run: cargo build --release --verbose
+

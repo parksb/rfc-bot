@@ -86,3 +86,38 @@ async fn main() {
         }
     }
 }
+
+#[cfg(test)]
+impl Item {
+    fn new(title: &str, link: &str, description: &str) -> Self {
+        Self {
+            title: title.to_string(),
+            link: link.to_string(),
+            description: description.to_string(),
+        }
+    }
+}
+
+#[test]
+fn test_compose_text_with_short_item() {
+    let title = "RFC 3092: Etymology of Foo";
+    let link = "https://www.rfc-editor.org/info/rfc3092";
+    let description = "This memo provides information for the Internet community.";
+
+    let actual = compose_text(&Item::new(title, link, description));
+    let expected = format!("[{}]({}) {}", title, link, description);
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_compose_text_with_long_item() {
+    let title = "RFC 5321: Simple Mail Transfer Protocol";
+    let link = "https://www.rfc-editor.org/info/rfc5321";
+    let description = "This document is a specification of the basic protocol for Internet electronic mail transport. It consolidates, updates, and clarifies several previous documents, making all or parts of most of them obsolete.";
+
+    let actual = compose_text(&Item::new(title, link, description));
+    let expected = format!("[{}]({}) {}...", title, link, &description[0..193]);
+
+    assert_eq!(actual, expected);
+}
