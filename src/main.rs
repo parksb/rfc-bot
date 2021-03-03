@@ -1,7 +1,7 @@
 use serde_derive::Deserialize;
 use std::fs::File;
 use std::io::Write;
-use std::{env, fs};
+use std::{env, fs, thread, time};
 
 #[derive(Deserialize, Debug)]
 struct Rss {
@@ -78,7 +78,11 @@ async fn main() {
     } = parse();
 
     if !is_updated(&last_build_date) {
-        let text = compose_text(&items[0]);
-        tweet(text).await;
+        for item in items.into_iter().rev().collect::<Vec<Item>>() {
+            let text = compose_text(&item);
+            let delay = time::Duration::from_secs(60);
+            tweet(text).await;
+            thread::sleep(delay);
+        }
     }
 }
