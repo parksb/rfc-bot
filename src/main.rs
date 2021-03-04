@@ -60,11 +60,13 @@ fn compose_text(item: &Item) -> String {
 }
 
 fn is_updated(last_build_date: &str) -> bool {
-    const PATH: &str = "last_build_date";
-    if fs::read_to_string(PATH).unwrap() == last_build_date {
+    let current_exe = env::current_exe().unwrap();
+    let current_dir = current_exe.parent().unwrap();
+    let path = format!("{}/last_build_date", current_dir.display());
+    if fs::read_to_string(&path).unwrap() == last_build_date {
         true
     } else {
-        let mut file = File::create(PATH).unwrap();
+        let mut file = File::create(&path).unwrap();
         file.write_all(last_build_date.as_bytes()).unwrap();
         false
     }
