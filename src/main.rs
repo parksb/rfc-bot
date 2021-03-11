@@ -16,7 +16,7 @@ struct Channel {
     items: Vec<Item>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 struct Item {
     title: String,
     link: String,
@@ -72,6 +72,25 @@ fn is_updated(last_build_date: &str) -> bool {
     }
 }
 
+fn slice_items(items: &[Item]) -> Vec<Item> {
+    let current_exe = env::current_exe().unwrap();
+    let current_dir = current_exe.parent().unwrap();
+    let path = format!("{}/last_link", current_dir.display());
+
+    let last_link = fs::read_to_string(&path);
+    let lastest_link = &items.first().unwrap().link;
+
+    let mut file = File::create(&path).unwrap();
+    file.write_all(lastest_link.as_bytes()).unwrap();
+
+    if let Ok(last_link) = last_link {
+        let limit = items.iter().position(|item| item.link.trim() == last_link.trim()).unwrap();
+        items[0..limit].to_vec()
+    } else {
+        (*items).to_vec()
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let Channel {
@@ -80,7 +99,7 @@ async fn main() {
     } = parse();
 
     if !is_updated(&last_build_date) {
-        for item in items.into_iter().rev().collect::<Vec<Item>>() {
+        for item in slice_items(&items).into_iter().rev().collect::<Vec<Item>>() {
             let text = compose_text(&item);
             let delay = time::Duration::from_secs(60);
             tweet(text).await;
