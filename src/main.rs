@@ -50,7 +50,8 @@ fn parse() -> Channel {
 fn compose_text(item: &Item) -> String {
     const MAX_LENGTH: usize = 280;
     const ELLIPSIS: &str = "...";
-    let text = format!("[{}]({}) {}", item.title, item.link, item.description);
+    let description = item.description.replace("\r\n", " ");
+    let text = format!("[{}]({}) {}", item.title, item.link, description);
     if text.len() > MAX_LENGTH {
         let text = text[0..(MAX_LENGTH - ELLIPSIS.len())].trim();
         format!("{}{}", text, ELLIPSIS)
@@ -84,7 +85,10 @@ fn slice_items(items: &[Item]) -> Vec<Item> {
     file.write_all(lastest_link.as_bytes()).unwrap();
 
     if let Ok(last_link) = last_link {
-        let limit = items.iter().position(|item| item.link.trim() == last_link.trim()).unwrap();
+        let limit = items
+            .iter()
+            .position(|item| item.link.trim() == last_link.trim())
+            .unwrap();
         items[0..limit].to_vec()
     } else {
         (*items).to_vec()
@@ -138,7 +142,23 @@ fn test_compose_text_with_long_item() {
     let description = "This document is a specification of the basic protocol for Internet electronic mail transport. It consolidates, updates, and clarifies several previous documents, making all or parts of most of them obsolete.";
 
     let actual = compose_text(&Item::new(title, link, description));
-    let expected = format!("[{}]({}) {}...", title, link, &description[0..193]);
+
+    let expected_description = "This document is a specification of the basic protocol for Internet electronic mail transport. It consolidates, updates, and clarifies several previous documents, making all or parts of most of";
+    let expected = format!("[{}]({}) {}...", title, link, expected_description);
+
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_compose_text_with_crlf() {
+    let title = "RFC 9006: TCP Usage Guidance in the Internet of Things (IoT)";
+    let link = "https://www.rfc-editor.org/info/rfc9006";
+    let description = "This document provides\r\nguidance on how to implement and use the\r\nTransmission Control Protocol.";
+
+    let actual = compose_text(&Item::new(title, link, description));
+
+    let expected_description = "This document provides guidance on how to implement and use the Transmission Control Protocol.";
+    let expected = format!("[{}]({}) {}", title, link, expected_description);
 
     assert_eq!(actual, expected);
 }
